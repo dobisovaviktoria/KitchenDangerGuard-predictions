@@ -1,16 +1,20 @@
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, accuracy_score
-import joblib
+import seaborn as sns
+import matplotlib.pyplot as plt
 import config
 
-# Load motion and temperature data from the database
+# Load motion and temperature data
 kdg_data = config.engine
 motion_df = pd.read_sql('SELECT * FROM motion_data', kdg_data)
 temperature_df = pd.read_sql('SELECT * FROM temperature_data', kdg_data)
 
-# Check for missing values and drop them
+# Check for missing values
+print("Missing Values in Motion Data:")
+print(motion_df.isnull().sum())
+print("\nMissing Values in Temperature Data:")
+print(temperature_df.isnull().sum())
+
+# Drop missing rows or fill them
 motion_df.dropna(inplace=True)
 temperature_df.dropna(inplace=True)
 
@@ -18,52 +22,97 @@ temperature_df.dropna(inplace=True)
 motion_df['motion_timestamp'] = pd.to_datetime(motion_df['motion_timestamp'])
 temperature_df['temp_timestamp'] = pd.to_datetime(temperature_df['temp_timestamp'])
 
-# Merge datasets based on nearest timestamps
-combined_data = pd.merge_asof(
-    temperature_df.sort_values('temp_timestamp'),
-    motion_df.sort_values('motion_timestamp'),
-    left_on='temp_timestamp',
-    right_on='motion_timestamp',
-    direction='nearest'
-)
+# Show basic information and summary statistics
+print("Motion Data Info:")
+print(motion_df.info())
 
-# Feature engineering
-combined_data['time_since_last_motion'] = (
-    combined_data['motion_timestamp'] - combined_data['motion_timestamp'].shift()
-).dt.total_seconds().fillna(0)
+print("\nTemperature Data Info:")
+print(temperature_df.info())
 
-# Define features (X) and labels (y)
-X = combined_data[['temp_value', 'motion_sensor_status', 'time_since_last_motion']]
-combined_data['unattended'] = ~combined_data['motion_sensor_status']
-y = combined_data['unattended'].astype(int)
+# Summary statistics for numerical columns
+print("\nMotion Data Summary:")
+print(motion_df.describe())
 
-# Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+print("\nTemperature Data Summary:")
+print(temperature_df.describe())
 
-# Train the model
-model = RandomForestClassifier(random_state=42)
-model.fit(X_train, y_train)
-print("Model training complete.")
+# Extract additional features from the timestamp
+motion_df['hour'] = motion_df['motion_timestamp'].dt.hour
+motion_df['day_of_week'] = motion_df['motion_timestamp'].dt.dayofweek
+temperature_df['hour'] = temperature_df['temp_timestamp'].dt.hour
+temperature_df['day_of_week'] = temperature_df['temp_timestamp'].dt.dayofweek
 
-# Evaluate the model
-y_pred = model.predict(X_test)
-print("Accuracy:", accuracy_score(y_test, y_pred))
-print("\nClassification Report:\n", classification_report(y_test, y_pred))
+# Motion count by hour and day of week
+motion_by_hour = motion_df.groupby('hour').size()
+motion_by_day = motion_df.groupby('day_of_week').size()
 
-# Save the trained model
-joblib.dump(model, 'unattended_stove_model.pkl')
-print("Model saved to 'unattended_stove_model.pkl'.")
+# Temperature count by hour and day of week
+temperature_by_hour = temperature_df.groupby('hour')['temp_value'].mean()
+temperature_by_day = temperature_df.groupby('day_of_week')['temp_value'].mean()
 
-# Load the model for predictions
-model = joblib.load('unattended_stove_model.pkl')
-print("Model loaded successfully.")
+# Plotting the results
+plt.figure(figsize=(12, 6))
 
-# Example input data for prediction
-# Fetch new data from the database and ensure it matches the feature names
-new_data = pd.DataFrame([[45.6, 0, 600]], columns=['temp_value', 'motion_sensor_status', 'time_since_last_motion'])
+# Plot motion data by hour
+plt.subplot(2, 2, 1)
+sns.lineplot(x=motion_by_hour.index, y=motion_by_hour.values)
+plt.title('Motion Count by Hour')
+plt.xlabel('Hour of the Day')
+plt.ylabel('Motion Count')
 
-# Make a prediction
-prediction = model.predict(new_data)
+# Plot temperature data by hour
+plt.subplot(2, 2, 2)
+sns.lineplot(x=temperature_by_hour.index, y=temperature_by_hour.values)
+plt.title('Average Temperature by Hour')
+plt.xlabel('Hour of the Day')
+plt.ylabel('Temperature')
 
-# Interpret the prediction
-print("Prediction:", "Unattended" if prediction[0] == 1 else "Attended")
+# Plot motion data by day of week
+plt.subplot(2, 2, 3)
+sns.lineplot(x=motion_by_day.index, y=motion_by_day.values)
+plt.title('Motion Count by Day of Week')
+plt.xlabel('Day of Week')
+plt.ylabel('Motion Count')
+
+# Plot temperature data by day of week
+plt.subplot(2, 2, 4)
+sns.lineplot(x=temperature_by_day.index, y=temperature_by_day.values)
+plt.title('Average Temperature by Day of Week')
+plt.xlabel('Day of Week')
+plt.ylabel('Temperature')
+
+plt.tight_layout()
+plt.show()
+
+# Plot histogram of temperature distribution
+plt.figure(figsize=(8, 6))
+sns.histplot(temperature_df['temp_value'], kde=True, color='blue', bins=30)
+plt.title('Temperature Value Distribution')
+plt.xlabel('Temperature (°C)')
+plt.ylabel('Frequency')
+
+# Add a vertical line for mean and median
+mean_temp = temperature_df['temp_value'].mean()
+median_temp = temperature_df['temp_value'].median()
+plt.axvline(mean_temp, color='red', linestyle='--', label=f'Mean ({mean_temp:.2f}°C)')
+plt.axvline(median_temp, color='green', linestyle='--', label=f'Median ({median_temp:.2f}°C)')
+
+plt.legend()
+plt.show()
+
+# Box plot to detect outliers in temperature data
+plt.figure(figsize=(8, 6))
+sns.boxplot(x=temperature_df['temp_value'], color='lightblue')
+plt.title('Box Plot of Temperature Values')
+plt.xlabel('Temperature (°C)')
+
+# Highlight outliers with a different color
+sns.boxplot(x=temperature_df['temp_value'], color='lightblue', fliersize=5, flierprops=dict(markerfacecolor='red', marker='o'))
+plt.show()
+
+# Filter values greater than a threshold for dangerous temperatures
+threshold_temp = 70
+dangerous_temps = temperature_df[temperature_df['temp_value'] > threshold_temp]
+
+print(f"Dangerous Temperatures (Above {threshold_temp}°C):")
+print(dangerous_temps)
