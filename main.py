@@ -1,10 +1,23 @@
 import pandas as pd
-from sqlalchemy import create_engine
-# Connect to your database
-engine = create_engine('postgresql://team7:team7password!@10.134.178.157/postgres')
+import numpy as np
+import config
 
 # Load motion and temperature data
-motion_df = pd.read_sql('SELECT * FROM motion_data', engine)
-temperature_df = pd.read_sql('SELECT * FROM temperature_data', engine)
+kdf_data = config.engine
+motion_df = pd.read_sql('SELECT * FROM motion_data', kdf_data)
+temperature_df = pd.read_sql('SELECT * FROM temperature_data', kdf_data)
+
+# Check for missing values
+print(motion_df.isnull().sum())
+print(temperature_df.isnull().sum())
+
+# Drop missing rows or fill them
+motion_df.dropna(inplace=True)
+temperature_df.dropna(inplace=True)
+
+# Convert timestamps to datetime
+motion_df['motion_timestamp'] = pd.to_datetime(motion_df['motion_timestamp'])
+temperature_df['temp_timestamp'] = pd.to_datetime(temperature_df['temp_timestamp'])
 
 print(motion_df)
+print(temperature_df)
