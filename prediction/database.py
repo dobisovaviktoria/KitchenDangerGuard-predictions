@@ -1,7 +1,7 @@
 import pandas as pd
 from sqlalchemy import create_engine, text
 
-# Example database connection (replace with your actual database connection string)
+
 DB_CONFIG = {
     "host": "10.134.178.157",
     "user": "team7",

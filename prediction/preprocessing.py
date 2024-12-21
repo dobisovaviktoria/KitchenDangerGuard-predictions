@@ -1,6 +1,4 @@
 import pandas as pd
-
-
 def preprocess_data(data):
     """
     Preprocess the data to add lag features and rolling averages for irregular time intervals.

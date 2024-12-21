@@ -1,18 +1,11 @@
 import os
-import joblib
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error
-from preprocessing import preprocess_data
-
-import os
 import joblib
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error
 from preprocessing import preprocess_data
 
-hazard_threshold=60
+hazard_threshold=170
 
 # Directory for saving models
 MODEL_DIR = "./USER_MODELS"  # Correct directory where models will be saved
@@ -41,12 +34,6 @@ def train_model(arduino_id, data):
         joblib.dump(model, model_filename)
         print(f"Model for device {arduino_id} trained and saved as {model_filename}.")
 
-        # Evaluate the model
-        y_pred = model.predict(X_test)
-    #     mse = mean_squared_error(y_test, y_pred)
-    #     print(f"Model trained for Arduino ID {arduino_id}. Test MSE: {mse}")
-    # else:
-    #     print(f"No data available for device {arduino_id}.")
 
 
 def predict_future(arduino_id, data, future_steps=5):
@@ -86,8 +73,6 @@ def predict_future(arduino_id, data, future_steps=5):
     last_timestamp = data['timestamp'].iloc[-1]  # Last known timestamp
     print(f"Last timestamp: {last_timestamp}")
 
-
-
     # Calculate the time difference between the last two data points
     if len(data) > 1:
         time_diff = (data['timestamp'].iloc[-1] - data['timestamp'].iloc[-2]).total_seconds() / 60  # in minutes
@@ -126,17 +111,3 @@ def predict_future(arduino_id, data, future_steps=5):
 
     return predictions,timeframes
 
-        # max_future_time=1.5
-        # # Filter predictions for dangerous values
-        # filtered_results = [
-        #     {"temperature": temp, "timeframe": timeframe}
-        #     for temp, timeframe in zip(predictions, timeframes)
-        #     if
-        #     temp > hazard_threshold and (timeframe - data['timestamp'].iloc[-1]).total_seconds() <= max_future_time * 60
-        # ]
-        #
-        # # Return only the first dangerous prediction, if any
-        # if filtered_results:
-        #     return filtered_results[0]  # Return the first match
-        # else:
-        #     return  " No dangerous predictions"

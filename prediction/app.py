@@ -7,7 +7,6 @@ app = Flask(__name__)
 # Train models for all devices
 def train_all_models():
     devices = fetch_all_devices()  # Fetch all device IDs
-
     # Loop through each device, fetch the data and train the model
     for device_id in devices:
         data = fetch_data(device_id)  # Fetch the data for the specific device
