@@ -1,7 +1,15 @@
+# KDG - Predictions
+
+## Authors
+- Khaled Asfour
+- Viktória Dobišová
+- Nang Cherry Naw
+- Deren Ozen
+- Alec Tuffin
 
 ---
-# **Prediction System Overview**
-This system predicts continuous temperature values using a **Random Forest Regressor**. Below are the steps to set up, run, and understand the system in **PyCharm**.
+## **Prediction System Overview**
+This system predicts continuous temperature values using a **Random Forest Regressor**. Ths repository is dependent on other repositories named Kitchen Danger Guard - backend and arduino. They should be treated as one project and ran together. Below are the steps to set up, run, and understand the system in **PyCharm**.
 
 ---
 ## **Prerequisites**
